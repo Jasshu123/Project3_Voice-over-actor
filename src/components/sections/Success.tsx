@@ -6,7 +6,11 @@ import Button from '../ui/Button';
 const Success: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const state = location.state as { name?: string; projectType?: string } | null;
+  const state = location.state as { 
+    name?: string; 
+    projectType?: string; 
+    hasRecording?: boolean;
+  } | null;
 
   const goHome = () => {
     navigate('/');
@@ -25,9 +29,17 @@ const Success: React.FC = () => {
         
         <p className="text-slate-600 mb-6">
           {state?.projectType ? (
-            <>Your {state.projectType} project inquiry has been received. I'll review the details and get back to you within 24 hours with a custom quote.</>
+            <>
+              Your {state.projectType} project inquiry has been received
+              {state?.hasRecording ? ' along with your voice sample' : ''}. 
+              I'll review the details and get back to you within 24 hours with a custom quote.
+            </>
           ) : (
-            <>Your project inquiry has been received. I'll review the details and get back to you within 24 hours with a custom quote.</>
+            <>
+              Your project inquiry has been received
+              {state?.hasRecording ? ' along with your voice sample' : ''}. 
+              I'll review the details and get back to you within 24 hours with a custom quote.
+            </>
           )}
         </p>
         
@@ -45,7 +57,7 @@ const Success: React.FC = () => {
               </li>
               <li className="flex items-start">
                 <CheckCircle className="text-amber-500 mr-2 flex-shrink-0 mt-1" size={16} />
-                <span>Sample recordings if requested</span>
+                <span>{state?.hasRecording ? 'Voice sample analysis' : 'Sample recordings if requested'}</span>
               </li>
               <li className="flex items-start">
                 <CheckCircle className="text-amber-500 mr-2 flex-shrink-0 mt-1" size={16} />

@@ -30,11 +30,12 @@ const Contact: React.FC = () => {
       // For now, we'll simulate a successful submission
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Redirect to success page
-      navigate('/success', { 
+      // Redirect to voice recording page
+      navigate('/record-voice', { 
         state: { 
           name: data.name,
-          projectType: data.projectType 
+          projectType: data.projectType,
+          formData: data
         } 
       });
     } catch (error) {

@@ -11,6 +11,7 @@ import Industries from './components/sections/Industries';
 import VoiceRecording from './components/sections/VoiceRecording';
 import Contact from './components/sections/Contact';
 import Success from './components/sections/Success';
+import RecordVoicePage from './components/sections/RecordVoicePage';
 
 import './index.css';
 
@@ -19,6 +20,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/success" element={<Success />} />
+        <Route path="/record-voice" element={<RecordVoicePage />} />
         <Route path="/" element={
           <div className="min-h-screen bg-gray-100">
             <Header />
