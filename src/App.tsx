@@ -8,6 +8,7 @@ import Portfolio from './components/sections/Portfolio';
 import Services from './components/sections/Services';
 import Testimonials from './components/sections/Testimonials';
 import Industries from './components/sections/Industries';
+import VoiceRecording from './components/sections/VoiceRecording';
 import Contact from './components/sections/Contact';
 import Success from './components/sections/Success';
 
@@ -28,6 +29,7 @@ function App() {
               <Services />
               <Testimonials />
               <Industries />
+              <VoiceRecording />
               <Contact />
             </main>
             <Footer />

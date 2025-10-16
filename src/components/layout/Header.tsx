@@ -51,6 +51,7 @@ const Header: React.FC = () => {
           <NavLink label="About" onClick={() => scrollToSection('about')} />
           <NavLink label="Portfolio" onClick={() => scrollToSection('portfolio')} />
           <NavLink label="Services" onClick={() => scrollToSection('services')} />
+          <NavLink label="Record" onClick={() => scrollToSection('voice-recording')} />
           <Button 
             variant="primary" 
             size="sm"
@@ -78,6 +79,7 @@ const Header: React.FC = () => {
             <MobileNavLink label="About" onClick={() => scrollToSection('about')} />
             <MobileNavLink label="Portfolio" onClick={() => scrollToSection('portfolio')} />
             <MobileNavLink label="Services" onClick={() => scrollToSection('services')} />
+            <MobileNavLink label="Record" onClick={() => scrollToSection('voice-recording')} />
             <MobileNavLink label="Contact" onClick={() => scrollToSection('contact')} />
           </div>
         </div>
