@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, ArrowLeft, Mic } from 'lucide-react';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Button from '../ui/Button';
 
@@ -10,10 +10,6 @@ const Success: React.FC = () => {
 
   const goHome = () => {
     navigate('/');
-  };
-
-  const goToVoiceRecorder = () => {
-    navigate('/voice-recorder');
   };
 
   return (
@@ -57,14 +53,6 @@ const Success: React.FC = () => {
               </li>
             </ul>
           </div>
-
-          <Button 
-            className="flex items-center justify-center w-full mb-4"
-            onClick={goToVoiceRecorder}
-          >
-            <Mic size={18} className="mr-2" />
-            Record Your Voice Now
-          </Button>
           
           <Button 
             variant="outline" 
