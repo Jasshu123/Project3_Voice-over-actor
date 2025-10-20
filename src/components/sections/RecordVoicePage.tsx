@@ -11,6 +11,7 @@ const RecordVoicePage: React.FC = () => {
     name?: string; 
     projectType?: string; 
     formData?: any;
+    contactId?: string;
   } | null;
 
   const goToSuccess = () => {
@@ -29,8 +30,6 @@ const RecordVoicePage: React.FC = () => {
 
   const handleRecordingComplete = (audioBlob: Blob, audioUrl: string) => {
     console.log('Recording completed:', { audioBlob, audioUrl });
-    // Here you could upload the recording to your server
-    // or store it temporarily for the user
   };
 
   return (
@@ -86,7 +85,11 @@ const RecordVoicePage: React.FC = () => {
           {/* Voice Recorder Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+              <VoiceRecorder 
+                onRecordingComplete={handleRecordingComplete}
+                contactId={state?.contactId}
+                autoUpload={true}
+              />
             </div>
 
             <div className="space-y-6">

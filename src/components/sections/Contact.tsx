@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import SectionTitle from '../ui/SectionTitle';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../services/api';
 
 interface FormValues {
   name: string;
@@ -24,23 +25,21 @@ const Contact: React.FC = () => {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      // Here you would typically send the data to your backend
-      console.log(data);
-      
-      // For now, we'll simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Submit contact form to backend
+      const response = await apiClient.submitContact(data);
       
       // Redirect to voice recording page
       navigate('/record-voice', { 
         state: { 
           name: data.name,
           projectType: data.projectType,
-          formData: data
+          formData: data,
+          contactId: response.contactId
         } 
       });
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('There was an error submitting your inquiry. Please try again.');
+      alert(`There was an error submitting your inquiry: ${error instanceof Error ? error.message : 'Please try again.'}`);
     }
   };
 

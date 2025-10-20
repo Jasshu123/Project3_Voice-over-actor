@@ -1,23 +1,33 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Play, Pause, Download, Trash2 } from 'lucide-react';
 import Button from './Button';
+import apiClient from '../../services/api';
 
 interface VoiceRecorderProps {
   onRecordingComplete?: (audioBlob: Blob, audioUrl: string) => void;
+  contactId?: string;
+  autoUpload?: boolean;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ 
+  onRecordingComplete, 
+  contactId, 
+  autoUpload = false 
+}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [hasRecording, setHasRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentAudioBlobRef = useRef<Blob | null>(null);
 
   useEffect(() => {
     // Check if MediaRecorder is supported
@@ -51,6 +61,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        currentAudioBlobRef.current = audioBlob;
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setHasRecording(true);
@@ -78,7 +89,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -87,6 +98,31 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+
+      // Auto-upload if contactId is provided and autoUpload is true
+      if (contactId && autoUpload && currentAudioBlobRef.current) {
+        await uploadRecording(currentAudioBlobRef.current);
+      }
+    }
+  };
+
+  const uploadRecording = async (audioBlob: Blob) => {
+    if (!contactId) {
+      console.warn('No contact ID provided for upload');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadStatus('idle');
+
+    try {
+      await apiClient.uploadVoiceRecording(contactId, audioBlob, recordingTime);
+      setUploadStatus('success');
+    } catch (error) {
+      console.error('Failed to upload recording:', error);
+      setUploadStatus('error');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -123,6 +159,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
     setHasRecording(false);
     setIsPlaying(false);
     setRecordingTime(0);
+    currentAudioBlobRef.current = null;
+    setUploadStatus('idle');
   };
 
   const formatTime = (seconds: number) => {
@@ -158,6 +196,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
           {hasRecording && !isRecording && (
             <div className="text-green-600 font-medium">
               Recording ready ({formatTime(recordingTime)})
+              {uploadStatus === 'success' && (
+                <div className="text-green-600 text-sm mt-1">✓ Uploaded successfully</div>
+              )}
+              {uploadStatus === 'error' && (
+                <div className="text-red-600 text-sm mt-1">✗ Upload failed</div>
+              )}
             </div>
           )}
         </div>
@@ -215,6 +259,26 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) =>
                 </Button>
               )}
             </>
+          )}
+
+          {/* Upload button for manual upload */}
+          {hasRecording && !isRecording && contactId && !autoUpload && (
+            <Button
+              onClick={() => currentAudioBlobRef.current && uploadRecording(currentAudioBlobRef.current)}
+              disabled={isUploading || uploadStatus === 'success'}
+              className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600"
+            >
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Uploading...</span>
+                </>
+              ) : uploadStatus === 'success' ? (
+                <span>✓ Uploaded</span>
+              ) : (
+                <span>Upload Recording</span>
+              )}
+            </Button>
           )}
         </div>
 
