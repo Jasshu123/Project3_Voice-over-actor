@@ -1,139 +1,155 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // API client configuration
 class ApiClient {
-  private baseURL: string;
-  private token: string | null = null;
-
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
-    this.token = localStorage.getItem('authToken');
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.token && { Authorization: `Bearer ${this.token}` }),
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
-    }
-  }
-
-  // Auth methods
-  setToken(token: string) {
-    this.token = token;
-    localStorage.setItem('authToken', token);
-  }
-
-  clearToken() {
-    this.token = null;
-    localStorage.removeItem('authToken');
-  }
-
   // Contact form submission
   async submitContact(contactData: any) {
-    return this.request('/contact/submit', {
-      method: 'POST',
-      body: JSON.stringify(contactData),
-    });
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert([{
+        name: contactData.name,
+        email: contactData.email,
+        phone: contactData.phone || null,
+        project_type: contactData.projectType,
+        script_length: contactData.scriptLength,
+        deadline: contactData.deadline || null,
+        budget: contactData.budget || null,
+        accent: contactData.accent || null,
+        tone: contactData.tone || null,
+        message: contactData.message,
+        status: 'new'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { contactId: data.id, ...data };
   }
 
   // Voice recording upload
   async uploadVoiceRecording(contactId: string, audioBlob: Blob, duration?: number) {
-    const formData = new FormData();
-    formData.append('voiceRecording', audioBlob, 'voice-recording.wav');
-    if (duration) {
-      formData.append('duration', duration.toString());
+    // Upload audio file to Supabase Storage
+    const fileName = `${contactId}-${Date.now()}.wav`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('voice-recordings')
+      .upload(fileName, audioBlob, {
+        contentType: 'audio/wav',
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
     }
 
-    return this.request(`/voice/upload/${contactId}`, {
-      method: 'POST',
-      headers: {
-        // Remove Content-Type header to let browser set it with boundary for FormData
-        ...(this.token && { Authorization: `Bearer ${this.token}` }),
-      },
-      body: formData,
-    });
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('voice-recordings')
+      .getPublicUrl(fileName);
+
+    // Create voice recording record
+    const { data, error } = await supabase
+      .from('voice_recordings')
+      .insert([{
+        contact_id: contactId,
+        file_path: publicUrl,
+        duration: duration || null,
+        file_size: audioBlob.size,
+        mime_type: 'audio/wav'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 
   // Get voice recording
   getVoiceRecordingUrl(recordingId: string): string {
-    return `${this.baseURL}/voice/${recordingId}`;
+    // This would typically fetch from the database and return the file_path
+    return recordingId;
   }
 
   // Delete voice recording
   async deleteVoiceRecording(recordingId: string) {
-    return this.request(`/voice/${recordingId}`, {
-      method: 'DELETE',
-    });
-  }
+    const { error } = await supabase
+      .from('voice_recordings')
+      .delete()
+      .eq('id', recordingId);
 
-  // Auth endpoints
-  async register(userData: { name: string; email: string; password: string; role?: string }) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async login(credentials: { email: string; password: string }) {
-    const response = await this.request<any>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
-    
-    if (response.token) {
-      this.setToken(response.token);
+    if (error) {
+      throw new Error(error.message);
     }
-    
-    return response;
-  }
 
-  async getProfile() {
-    return this.request('/auth/profile');
+    return { success: true };
   }
 
   // Admin endpoints
   async getAllContacts() {
-    return this.request('/contact/all');
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*, voice_recordings(*)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 
   async getContact(contactId: string) {
-    return this.request(`/contact/${contactId}`);
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*, voice_recordings(*)')
+      .eq('id', contactId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 
   async updateContactStatus(contactId: string, status: string) {
-    return this.request(`/contact/${contactId}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
+    const { data, error } = await supabase
+      .from('contacts')
+      .update({ status })
+      .eq('id', contactId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 
   async getAllVoiceRecordings() {
-    return this.request('/voice/');
+    const { data, error } = await supabase
+      .from('voice_recordings')
+      .select('*, contacts(*)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 }
 
-export const apiClient = new ApiClient(API_BASE_URL);
+export const apiClient = new ApiClient();
 export default apiClient;
